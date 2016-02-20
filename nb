@@ -1,6 +1,17 @@
 import sys
 from data_import import data_reader
 from classify import classify
+import math
+
+
+
+def probability(weights, b, point, class_name):
+    prob = b
+    for key,value in point.items():
+        if key != class_name:
+            if value == 1:
+                prob += weights[key]
+    return prob
 
 def main():
     if len(sys.argv)!= 5:
@@ -14,16 +25,54 @@ def main():
         print("File location in parameters are incorrect")
         sys.exit(2)
 
-
+    beta = int(sys.argv[3])
     training_data = data[0]
     class_name = data[1]
     weights = {}
     headers = list(training_data[0].keys())
     headers.remove(class_name)
-    separte = classify(training_data, class_name)
+    separate = classify(training_data, class_name)
+
+    b = math.log((len(separate[1])+beta-1)/(len(separate[-1])+beta-1))
+
+    for header in headers:
+        num = beta-1
+        for point in separate[1]:
+            if point[header] == -1:
+                num += 1
+        denom = beta-1
+        for point in separate[-1]:
+            if point[header] == -1:
+               denom += 1
+        b += math.log(num/denom)
+
+    for header in headers:
+        num_left = beta-1
+        num_right = beta-1
+        denom_left = beta-1
+        denom_right = beta-1
+
+        for point in separate[1]:
+            if point[header] == 1:
+                num_left += 1
+            else:
+                num_right += 1
+
+        for point in separate[-1]:
+            if point[header] == 1:
+                denom_left += 1
+            else:
+                denom_right += 1
+        weights[header] = math.log(num_left/denom_left) - math.log(num_right/denom_right)
+    model = open(sys.argv[4], "wt")
+    model.write(str(b)+"\n")
+    for key,value in weights.items():
+        model.write(str(key) + " "+ str(value) + "\n")
+        print(key, value)
 
 
-
+    for data in test_data:
+        print(probability(weights, b, data, class_name))
 
 
 if __name__ =="__main__":
